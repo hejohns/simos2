@@ -39,5 +39,4 @@ upload: main.hex
 	$(AVRDUDE) -C$(AVRDUDE_CONF) -v -v -v -v -p$(mmcu) -c$(PROGRAMMER_ID) -P$(PORT) -b$(UPLOAD_BAUD) -D -Uflash:w:$<:i
 
 clean: 
-	rm *.o *.d *.elf *.hex
-	rm AVR-UART-lib/usart.d
+	rm -r *.o *.d *.elf *.hex
