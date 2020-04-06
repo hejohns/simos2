@@ -1,7 +1,9 @@
-//kernel.c
+// kernel.c
 /* Heavily based on TinyRealTime- Dan Henriksson, Anton Cervin */
 #include <stdio.h>
 #include <avr/io.h>
+#include <AVR-UART-lib/usart.h>
+#include <avr/interrupt.h>
 #include "kernel.h"
 
 #define lo8(X) (((uint16_t)X)&0x00FF)
@@ -81,124 +83,64 @@
         "pop __zero_reg__\n\t"\
         "pop __tmp_reg__")
 
-//const char taskHeader[] = "task header";
-//const char taskFooter[] = "task footer";
-//const char kernelHeader[] = "kernel header";
-//const char kernelFooter[] = "kernel footer";
+// const char taskHeader[] = "task header";
+// const char taskFooter[] = "task footer";
+// const char kernelHeader[] = "kernel header";
+// const char kernelFooter[] = "kernel footer";
 
-typedef enum
+typedef enum state
 {
     terminated = 0,
     raw = 1,
     ready = 2,
     running = 3,
     stopped = 4
-} state_T;
+} State;
 
 typedef struct task
 {
-    //char header[strlen(taskHeader)+1];
-    void* sTop;
-    void* sp; //stack pointer
-    state_T state;
-    //char footer[strlen(taskFooter)+1];
-} task_T;
+    // char header[strlen(taskHeader)+1];
+    void* sTop; // what to restore kernel.memptr to after tasks completes
+    void* sp; // stores stack pointer when not running
+    State state;
+    // char footer[strlen(taskFooter)+1];
+} Task;
 
 static struct
 {
-    //char header[strlen(kernelHeader)+1];
-    void* memptr; //pointer to bottom of stack
+    // char header[strlen(kernelHeader)+1];
+    Task tasks[MAX_NUMBER_OF_TASKS];
+    char* memptr; // pointer to bottom of stack
     uint8_t nbrOfTasks;
     uint8_t running;
-    task_T tasks[MAX_NUMBER_OF_TASKS];
-    //char footer[strlen(kernelFooter)+1];
+    // char footer[strlen(kernelFooter)+1];
 } kernel;
 
 void kernel_init(uint16_t stackReserve)
 {
-    //set up timer 1
-    TCCR1A = 0b00000000; //normal operation- disconnect OC1, disable pwm
-    TCCR1B = 0b00001100; //reset counter on overflow, prescaler=256
-    TIMSK1 = 0b00000010; //output compare (OCIE1A) bit set
-    OCR1AH = 0x34; //100ms=6250 counts at 256 scale
-    OCR1AL = 0xBC; //set to 200ms slices
-    //strcpy(kernel.header, kernelHeader);
-    //strcpy(kernel.footer, kernelFooter);
-    kernel.memptr = (void*)(RAMEND-stackReserve);
+    // set up timer 1
+    TCCR1A = 0b00000000; // normal operation- disconnect OC1, disable pwm
+    TCCR1B = 0b00001100; // reset counter on overflow, prescaler=256
+    TIMSK1 = 0b00000010; // output compare (OCIE1A) bit set
+    OCR1AH = 0x34; // 100ms=6250 counts at 256 scale
+    OCR1AL = 0xBC; // set to 200ms slices
+    // strcpy(kernel.header, kernelHeader);
+    // strcpy(kernel.footer, kernelFooter);
+    kernel.memptr = (char*)(RAMEND-stackReserve);
     kernel.nbrOfTasks = 0;
     kernel.running = 0;
-    //kernel.taskRunning2Ready = &taskRunning2Ready_;
-    //kernel.taskReady2Running = &taskReady2Running_;
-    //kernel.taskRaw2Running = &taskRaw2Running_;
-    //kernel.taskCreate = &taskCreate_;
-    //kernel.taskTerminate = &taskTerminate_;
-    //kernel.taskStop = &taskStop_;
-    //kernel.taskResume = &taskResume_;
-    //kernel.taskDestroy = &taskDestroy_;
-    //kernel.shInit = &shInit_;
-    TCNT1 = 0x0000; //reset counter 1 (register of timer 1)
+    TCNT1 = 0x0000; // reset counter 1 (register of timer 1)
 }
 
 ISR(TIMER1_COMPA_vect, ISR_NAKED)
 {
-    //called by timer interrupt. The "meat" of the kernel.
-    //prologue
+    // called by timer interrupt. The "meat" of the kernel.
+    // prologue
     cli();
     contextPush();
-    kernel.tasks[kernel.running].sp = SP;
-    uint8_t runNext;
-    //pop terminated tasks off kernel task stack
-    for(uint8_t i=kernel.nbrOfTasks-1; i>=0; i--){
-        task_T* taskN = &(kernel.tasks[i]);
-        if(taskN->state == terminated){
-            kernel.taskDestroy(i);
-            continue;
-        }
-        else{
-            break;
-        }
-    }
-    //Round Robin scheduler
-    if(kernel.nbrOfTasks <= 0){
-        panic();
-    }
-    else if(kernel.nbrOfTasks == 1){
-            runNext = 0;
-    }
-    else{
-        uint8_t i = (kernel.running+1)%kernel.nbrOfTasks;
-        do{
-            //process based on state
-            task* taskN = &kernel.tasks[i];
-            if(taskN->state == stopped){
-                i = (i+1)%kernel.nbrOfTasks;
-                continue;
-            }
-            else if(taskN->state == terminated){
-                i = (i+1)%kernel.nbrOfTasks;
-                continue;
-            }
-            else if(taskN->state == ready){
-                kernel.taskRunning2Ready(kernel.running);
-                kernel.taskReady2Running(i);
-                kernel.running = i;
-                runNext = i;
-                break;
-            }
-            else if(taskN->state == raw){
-                kernel.taskRunning2Ready(kernel.running);
-                kernel.taskRaw2Running(i);
-            }
-            else
-            {
-                printf(\
-                "Scheduler Failure\ni: %d\ntaskN->state: %d\n", i, taskN->state);
-                panic();
-            }
-        } while(true);
-    }
-    //epilogue
-    SP = kernel.tasks[runNext].sp;
+    // kernel.tasks[kernel.running].sp = SP;
+    // epilogue
+    // SP = kernel.tasks[runNext].sp;
     contextPop();
     TCNT1 = 0x0000;
     reti();

@@ -26,10 +26,13 @@ test:
 usart.o: AVR-UART-lib/usart.c AVR-UART-lib/usart.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
+kernel.o: kernel.c kernel.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
 main.o: main.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-main.elf: main.o usart.o
+main.elf: main.o usart.o kernel.o
 	$(CC) $(CFLAGS) -Wl,$(LDFLAGS) $^ -o $@
 main.hex: main.elf
 #	$(AVROBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0 $< main.eep
