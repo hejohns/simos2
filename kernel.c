@@ -9,6 +9,10 @@
 #define lo8(X) (((uint16_t)X)&0x00FF)
 #define hi8(X) ((((uint16_t)X)&0xFF00)>>8)
 
+/* Refer to godbolt.org for graphical asm output and
+ * https://www.avrfreaks.net/forum/need-save-and-restore-stack-pointer-table
+ * (clawson includes a snippet from FreeRTOS w/ their context push/pop)
+ */
 #define contextPush() \
     asm volatile (\
         "push __tmp_reg__\n\t"\
