@@ -9,6 +9,8 @@
 #define lo8(X) (((uint16_t)X)&0x00FF)
 #define hi8(X) ((((uint16_t)X)&0xFF00)>>8)
 
+#define resetCounter1() do{ TCNT1 = 0x0000} while(1) // reset counter 1 (register of timer 1)
+
 /* Refer to godbolt.org for graphical asm output and
  * https://www.avrfreaks.net/forum/need-save-and-restore-stack-pointer-table
  * (clawson includes a snippet from FreeRTOS w/ their context push/pop)
@@ -98,11 +100,6 @@
         "pop __zero_reg__\n\t"\
         "pop __tmp_reg__")
 
-// const char taskHeader[] = "task header";
-// const char taskFooter[] = "task footer";
-// const char kernelHeader[] = "kernel header";
-// const char kernelFooter[] = "kernel footer";
-
 typedef enum state
 {
     terminated = 0,
@@ -110,25 +107,21 @@ typedef enum state
     ready = 2,
     running = 3,
     stopped = 4
-} State;
+} state;
 
-typedef struct task
+typedef struct process
 {
-    // char header[strlen(taskHeader)+1];
-    void* sTop; // what to restore kernel.memptr to after tasks completes
-    void* sp; // stores stack pointer when not running
-    State state;
-    // char footer[strlen(taskFooter)+1];
-} Task;
+    void* stackTop; // what to restore kernel.memptr to after tasks completes
+    state state;
+} process;
 
 static struct
 {
-    // char header[strlen(kernelHeader)+1];
-    Task tasks[MAX_NUMBER_OF_TASKS];
-    char* memptr; // pointer to bottom of stack
+    process pid[MAX_NUMBER_OF_TASKS];
+    char* stackBottom; // pointer to bottom of stack
     uint8_t nbrOfTasks;
     uint8_t running;
-    // char footer[strlen(kernelFooter)+1];
+    uint8_t scratch[8];
 } kernel;
 
 void kernel_init(uint16_t stackReserve)
@@ -139,12 +132,13 @@ void kernel_init(uint16_t stackReserve)
     TIMSK1 = 0b00000010; // output compare (OCIE1A) bit set
     OCR1AH = 0x34; // 100ms=6250 counts at 256 scale
     OCR1AL = 0xBC; // set to 200ms slices
-    // strcpy(kernel.header, kernelHeader);
-    // strcpy(kernel.footer, kernelFooter);
-    kernel.memptr = (char*)(RAMEND-stackReserve);
+    kernel.stackBottom = (char*)(RAMEND-stackReserve);
     kernel.nbrOfTasks = 0;
     kernel.running = 0;
     TCNT1 = 0x0000; // reset counter 1 (register of timer 1)
+}
+
+static void kernel_scheduler(){
 }
 
 ISR(TIMER1_COMPA_vect, ISR_NAKED)
@@ -153,9 +147,8 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED)
     // prologue
     cli();
     contextPush();
-    // kernel.tasks[kernel.running].sp = SP;
+    kernel_scheduler();
     // epilogue
-    // SP = kernel.tasks[runNext].sp;
     contextPop();
     TCNT1 = 0x0000;
     reti();
@@ -174,5 +167,5 @@ void panic()
     cli();
     printf("Kernel panic!\nJumping to bootloader...\n");
     // goto address 0 == reboot
-    goto *0x0000;
+    goto *0x0000; //some day, will change to watchdog reset...
 }

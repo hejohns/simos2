@@ -18,6 +18,8 @@ AVROBJCOPY := avr-objcopy
 
 export CPATH := .:
 
+.PHONY: test upload clean
+
 default:
 	make main.elf
 
