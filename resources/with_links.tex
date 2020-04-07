@@ -1,0 +1,30 @@
+\documentclass{article}
+% https://stackoverflow.com/questions/38292590/remove-section-numbers-latex
+% https://tex.stackexchange.com/questions/8351/what-do-makeatletter-and-makeatother-do
+% second link for information about the first. tldr tex is confusing.
+\makeatletter
+\renewcommand{\@seccntformat}[1]{}
+\renewcommand{\numberline}[1]{}
+\makeatother
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{adjustbox}
+\usepackage[final]{pdfpages}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    bookmarks=true,
+}
+\urlstyle{same}
+
+\begin{document}
+\tableofcontents
+\newpage
+\section{clawson\_FreeRTOS\_SAVE\_CONTEXT.png}
+\url{https://www.avrfreaks.net/forum/need-save-and-restore-stack-pointer-table}\\
+\includegraphics[width=\textwidth]{clawson_FreeRTOS_SAVE_CONTEXT.png}
+\end{document}

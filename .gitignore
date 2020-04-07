@@ -1,4 +1,8 @@
 tags
+*.aux
+*.log
+*.out
+*.toc
 *.o
 *.d
 *.elf
