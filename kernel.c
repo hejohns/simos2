@@ -10,7 +10,7 @@
 #define hi8(X) ((((uint16_t)X)&0xFF00)>>8)
 
 #define contextPush() \
-    asm(\
+    asm volatile (\
         "push __tmp_reg__\n\t"\
         "push __zero_reg__\n\t"\
         "push r2\n\t"\
@@ -44,10 +44,21 @@
         "push r30\n\t"\
         "push r31\n\t"\
         "in __tmp_reg__,  __SREG__\n\t"\
-        "push __tmp_reg__")
-			
+        "push __tmp_reg__\n\t"\
+        "in __tmp_reg__,  __SP_L__\n\t"\
+        "push __tmp_reg__\n\t"\
+        "in __tmp_reg__,  __SP_H__\n\t"\
+        "push __tmp_reg__\n\t"\
+        "in r28,__SP_L__\n\t"\
+        "in r29,__SP_H__\n\t"\
+        "clr __zero_reg__")
+
 #define contextPop() \
-    asm(\
+    asm volatile(\
+        "pop __tmp_reg__\n\t"\
+        "out __SP_H__, __tmp_reg__\n\t"\
+        "pop __tmp_reg__\n\t"\
+        "out __SP_L__, __tmp_reg__\n\t"\
         "pop __tmp_reg__\n\t"\
         "out __SREG__, __tmp_reg__\n\t"\
         "pop r31\n\t"\
