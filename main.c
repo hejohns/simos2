@@ -1,19 +1,12 @@
 #include <stdio.h>
-#include <avr/io.h>
+#include <stdbool.h>
 #include <avr/interrupt.h>
+#include <avr/io.h>
 #include <util/delay.h>
-//#include <avr/pgmspace.h>
-//#include <string.h>
 
 #include <AVR-UART-lib/usart.h>
 #include "kernel.h"
-
-void testFunc(void* tmp){
-    printf("testFunc\n");
-    while(1){
-        asm("nop");
-    }
-}
+#include "sh.h"
 
 int main()
 {
@@ -25,10 +18,10 @@ int main()
     kernel_init(RAMEND-SP+128);
     sei(); // enable interrupts, library wouldn't work without this
     printf("hello from printf\n");
-    kernel_taskCreate(&testFunc, 128, (void*)0);
-    while(1){
-        asm("nop");
+    kernel_taskCreate(&sh_init, 128, (void*)0);
+    while(true){
         // wait for interrupts eternally
+        asm("nop");
     }
     return 0;
 }

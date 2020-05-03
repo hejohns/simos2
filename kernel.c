@@ -1,15 +1,16 @@
 // kernel.c
 /* Heavily based on TinyRealTime- Dan Henriksson, Anton Cervin */
 #include <stdio.h>
+#include <stdbool.h>
+#include <avr/interrupt.h>
 #include <avr/io.h>
 #include <AVR-UART-lib/usart.h>
-#include <avr/interrupt.h>
 #include "kernel.h"
 
 #define lo8(X) (((uint16_t)X)&0x00FF)
 #define hi8(X) ((((uint16_t)X)&0xFF00)>>8)
 
-#define resetCounter1() do{ TCNT1 = 0x0000} while(0) // reset counter 1 (register of timer 1)
+#define resetCounter1() do{ TCNT1 = 0x0000;} while(false) // reset counter 1 (register of timer 1)
 
 static char* STACK_MINIMUM_ADDRESS = (char*)400;
 
@@ -193,16 +194,17 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED)
     kernel.sp_tmp = SP;
     kernel_scheduler();
     // epilogue
-    TCNT1 = 0x0000;
     if(kernel.pid[kernel.running].state == raw){
         goto raw2running;
     }
     SP = kernel.pid[kernel.running].sp;
     contextPop();
+    resetCounter1();
     reti();
 raw2running:
     SP = kernel.pid[kernel.running].sp;
     contextPop();
+    resetCounter1();
     sei();
     asm volatile("ijmp");
 }
