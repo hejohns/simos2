@@ -53,20 +53,12 @@ static char* STACK_MINIMUM_ADDRESS = (char*)400;
         "push r31\n\t"\
         "in __tmp_reg__,  __SREG__\n\t"\
         "push __tmp_reg__\n\t"\
-        "in __tmp_reg__,  __SP_L__\n\t"\
-        "push __tmp_reg__\n\t"\
-        "in __tmp_reg__,  __SP_H__\n\t"\
-        "push __tmp_reg__\n\t"\
         "in r28,__SP_L__\n\t"\
         "in r29,__SP_H__\n\t"\
         "clr __zero_reg__")
 
 #define contextPop() \
     asm volatile(\
-        "pop __tmp_reg__\n\t"\
-        "out __SP_H__, __tmp_reg__\n\t"\
-        "pop __tmp_reg__\n\t"\
-        "out __SP_L__, __tmp_reg__\n\t"\
         "pop __tmp_reg__\n\t"\
         "out __SREG__, __tmp_reg__\n\t"\
         "pop r31\n\t"\
@@ -114,6 +106,7 @@ typedef enum state
 typedef struct process
 {
     void* stackTop; // what to restore kernel.memptr to after tasks completes
+    uint16_t sp;
     state state;
 } process;
 
@@ -121,6 +114,7 @@ static struct
 {
     process pid[MAX_NUMBER_OF_TASKS];
     char* stackBottom; // pointer to bottom of stack
+    uint16_t sp_tmp;
     uint8_t nbrOfTasks;
     uint8_t running;
     uint8_t scratch[8];
@@ -155,10 +149,6 @@ char kernel_taskCreate(void (*func)(void*), uint16_t stackSize , void* args){
     sp = (uint8_t*)kernel.stackBottom;
     kernel.pid[kernel.nbrOfTasks].stackTop = kernel.stackBottom;
     kernel.pid[kernel.nbrOfTasks].state = raw;
-    kernel.nbrOfTasks++;
-    // load Z reg for ijmp
-    *(sp--) = lo8(func); // r30- aka lo8(Z)
-    *(sp--) = hi8(func); // r31- aka hi8(Z)
     for(unsigned char i=0; i<24; i++){
         *(sp--) = 0x00;
     }
@@ -169,11 +159,13 @@ char kernel_taskCreate(void (*func)(void*), uint16_t stackSize , void* args){
     *(sp--) = 0x00; // clear r27
     *(sp--) = lo8(kernel.stackBottom); // r28- aka lo8(Y)
     *(sp--) = hi8(kernel.stackBottom); // r29- aka hi8(Y)
-    *(sp--) = 0x00; // clear r30
-    *(sp--) = 0x00; // clear r31
-    *(sp--) = 0xFF; // invalidate __SREG__ for debugging
-    *(sp--) = lo8(kernel.stackBottom); // __SP_L__
-    *(sp--) = hi8(kernel.stackBottom); // __SP_H__
+    // load Z reg for ijmp
+    *(sp--) = lo8(func); // r30- aka lo8(Z)
+    *(sp--) = hi8(func); // r31- aka hi8(Z)
+    *(sp--) = 0x0; // __SREG__
+    kernel.pid[kernel.nbrOfTasks].sp = (uint16_t)sp;
+    kernel.nbrOfTasks++;
+    kernel.stackBottom -= stackSize;
     return 0;
 ENOBUFS:
     return 1;
@@ -183,20 +175,36 @@ ENOMEM:
     return 2;
 }
 
-static void kernel_scheduler(){
+static inline void kernel_scheduler(){
+    if(kernel.pid[kernel.running].state == running){
+        kernel.pid[kernel.running].state = ready;
+        kernel.pid[kernel.running].sp = kernel.sp_tmp;
+    }
+    kernel.running = (kernel.running+1) % kernel.nbrOfTasks;
 }
 
 ISR(TIMER1_COMPA_vect, ISR_NAKED)
 {
     // called by timer interrupt. The "meat" of the kernel.
     // prologue
+    /* interrupt pushes pc to stack */
     cli();
     contextPush();
+    kernel.sp_tmp = SP;
     kernel_scheduler();
     // epilogue
-    contextPop();
     TCNT1 = 0x0000;
+    if(kernel.pid[kernel.running].state == raw){
+        goto raw2running;
+    }
+    SP = kernel.pid[kernel.running].sp;
+    contextPop();
     reti();
+raw2running:
+    SP = kernel.pid[kernel.running].sp;
+    contextPop();
+    sei();
+    asm volatile("ijmp");
 }
 
 ISR(BADISR_vect)
@@ -212,5 +220,6 @@ void panic()
     cli();
     printf("Kernel panic!\nJumping to bootloader...\n");
     // goto address 0 == reboot
-    goto *0x0000; //some day, will change to watchdog reset...
+    SP = RAMEND;
+    goto *0x0000; //some day, will change to watchdog reset to properly reset everything
 }
