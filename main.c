@@ -15,7 +15,7 @@ int main()
     stdout = &uart0_io; // attach uart stream to stdout & stdin
     stdin = &uart0_io; // uart0_in and uart0_out are only available if NO_USART_RX or NO_USART_TX is defined
     
-    kernel_init(8);
+    kernel_init(RAMEND-SP+8);
     sei(); // enable interrupts, library wouldn't work without this
     printf("hello from printf\n");
     while(1){

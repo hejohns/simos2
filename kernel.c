@@ -9,7 +9,9 @@
 #define lo8(X) (((uint16_t)X)&0x00FF)
 #define hi8(X) ((((uint16_t)X)&0xFF00)>>8)
 
-#define resetCounter1() do{ TCNT1 = 0x0000} while(1) // reset counter 1 (register of timer 1)
+#define resetCounter1() do{ TCNT1 = 0x0000} while(0) // reset counter 1 (register of timer 1)
+
+static char* STACK_MINIMUM_ADDRESS = (char*)400;
 
 /* Refer to godbolt.org for graphical asm output and
  * https://www.avrfreaks.net/forum/need-save-and-restore-stack-pointer-table
@@ -102,11 +104,11 @@
 
 typedef enum state
 {
-    terminated = 0,
-    raw = 1,
-    ready = 2,
-    running = 3,
-    stopped = 4
+    terminated = 0x0,
+    raw = 0x1,
+    ready = 0x2,
+    running = 0x3,
+    stopped = 0x4
 } state;
 
 typedef struct process
@@ -136,6 +138,49 @@ void kernel_init(uint16_t stackReserve)
     kernel.nbrOfTasks = 0;
     kernel.running = 0;
     TCNT1 = 0x0000; // reset counter 1 (register of timer 1)
+}
+
+char kernel_taskCreate(void (*func)(void*), uint16_t stackSize , void* args){
+    uint8_t* sp;
+    if(kernel.stackBottom-stackSize < STACK_MINIMUM_ADDRESS){
+        goto ENOMEM;
+    }
+    if(kernel.nbrOfTasks >= MAX_NUMBER_OF_TASKS){
+        goto ENOBUFS;
+    }
+    if(0){
+        // what qualifies as an invalid arg?
+        goto EINVAL;
+    }
+    sp = (uint8_t*)kernel.stackBottom;
+    kernel.pid[kernel.nbrOfTasks].stackTop = kernel.stackBottom;
+    kernel.pid[kernel.nbrOfTasks].state = raw;
+    kernel.nbrOfTasks++;
+    // load Z reg for ijmp
+    *(sp--) = lo8(func); // r30- aka lo8(Z)
+    *(sp--) = hi8(func); // r31- aka hi8(Z)
+    for(unsigned char i=0; i<24; i++){
+        *(sp--) = 0x00;
+    }
+    // load args in r24:25
+    *(sp--) = lo8(args);
+    *(sp--) = hi8(args);
+    *(sp--) = 0x00; // clear r26
+    *(sp--) = 0x00; // clear r27
+    *(sp--) = lo8(kernel.stackBottom); // r28- aka lo8(Y)
+    *(sp--) = hi8(kernel.stackBottom); // r29- aka hi8(Y)
+    *(sp--) = 0x00; // clear r30
+    *(sp--) = 0x00; // clear r31
+    *(sp--) = 0xFF; // invalidate __SREG__ for debugging
+    *(sp--) = lo8(kernel.stackBottom); // __SP_L__
+    *(sp--) = hi8(kernel.stackBottom); // __SP_H__
+    return 0;
+ENOBUFS:
+    return 1;
+EINVAL:
+    return -1;
+ENOMEM:
+    return 2;
 }
 
 static void kernel_scheduler(){
