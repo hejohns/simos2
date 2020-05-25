@@ -17,8 +17,7 @@ int main()
     
     // allocate task ram as array so the compiler won't accidentally
     // use the same space
-    uint8_t total_task_ram[TOTAL_TASK_RAM_SIZE];
-    kernel_init(total_task_ram);
+    kernel_init(128);
     sei(); // enable interrupts, library wouldn't work without this
     printf("hello from printf\n");
     if(kernel_taskCreate(&sh_init, 128, (void*)0)){

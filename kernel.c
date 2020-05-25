@@ -12,6 +12,8 @@
 
 #define resetCounter1() do{ TCNT1 = 0x0000;} while(false) // reset counter 1 (register of timer 1)
 
+static uint8_t* STACK_MINIMUM_ADDRESS = (uint8_t*)400;
+
 /* Refer to godbolt.org for graphical asm output and
  * https://www.avrfreaks.net/forum/need-save-and-restore-stack-pointer-table
  * (clawson includes a snippet from FreeRTOS w/ their context push/pop)
@@ -112,7 +114,6 @@ typedef struct process
 static struct
 {
     process pid[MAX_NUMBER_OF_TASKS];
-    uint8_t* task_ram_start;
     uint8_t* stackBottom; // pointer to bottom of stack
     uint16_t sp_tmp;
     uint8_t nbrOfTasks;
@@ -120,7 +121,7 @@ static struct
     uint8_t scratch[8];
 } kernel;
 
-void kernel_init(uint8_t* task_ram_start)
+void kernel_init(uint16_t stackReserve)
 {
     // set up timer 1
     TCCR1A = 0b00000000; // normal operation- disconnect OC1, disable pwm
@@ -128,8 +129,7 @@ void kernel_init(uint8_t* task_ram_start)
     TIMSK1 = 0b00000010; // output compare (OCIE1A) bit set
     OCR1AH = 0x34; // 100ms=6250 counts at 256 scale
     OCR1AL = 0xBC; // set to 200ms slices
-    kernel.task_ram_start = task_ram_start;
-    kernel.stackBottom = (task_ram_start+TOTAL_TASK_RAM_SIZE-1);
+    kernel.stackBottom = (uint8_t*)(RAMEND-stackReserve);
     kernel.nbrOfTasks = 0;
     kernel.running = 0;
     TCNT1 = 0x0000; // reset counter 1 (register of timer 1)
@@ -137,7 +137,7 @@ void kernel_init(uint8_t* task_ram_start)
 
 char kernel_taskCreate(void (*func)(void*), uint16_t stackSize , void* args){
     uint8_t* sp;
-    if(kernel.stackBottom-stackSize < kernel.task_ram_start){
+    if(kernel.stackBottom-stackSize < STACK_MINIMUM_ADDRESS){
         goto ENOMEM;
     }
     if(kernel.nbrOfTasks >= MAX_NUMBER_OF_TASKS){
@@ -195,7 +195,6 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED)
     kernel.sp_tmp = SP;
     kernel_scheduler();
     // epilogue
-    printf("test\n");
     if(kernel.pid[kernel.running].state == raw){
         goto raw2running;
     }
@@ -204,6 +203,7 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED)
     resetCounter1();
     reti();
 raw2running:
+    kernel.pid[kernel.running].state = running;
     SP = kernel.pid[kernel.running].sp;
     contextPop();
     resetCounter1();
