@@ -181,6 +181,7 @@ static inline void kernel_scheduler(){
         kernel.pid[kernel.running].state = ready;
         kernel.pid[kernel.running].sp = kernel.sp_tmp;
     }
+    // simple round robin
     kernel.running = (kernel.running+1) % kernel.nbrOfTasks;
 }
 
@@ -188,8 +189,9 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED)
 {
     // called by timer interrupt. The "meat" of the kernel.
     // prologue
-    /* interrupt pushes pc to stack */
     cli();
+    /* interrupt pushes 3 byte pc to stack */
+    SP += 3;
     contextPush();
     kernel.sp_tmp = SP;
     kernel_scheduler();

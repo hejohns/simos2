@@ -28,7 +28,7 @@ default:
 
 debug: main.elf
 	$(TERM) -e "simavr -g -m  $(mmcu) -f 16000000 $^" &
-	(printf "file $^\ntarget remote : 1234" && cat) | avr-gdb
+	(printf "file $^\ntarget remote : 1234\n" && cat) | avr-gdb
 
 sh.o: sh.c sh.h
 	$(CC) $(CFLAGS) -c $< -o $@
