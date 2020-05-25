@@ -16,15 +16,19 @@ AVRDUDE := avrdude
 
 AVROBJCOPY := avr-objcopy
 
+# etc
+TERM := xterm
+
 export CPATH := .:
 
-.PHONY: default test upload clean
+.PHONY: default debug upload clean
 
 default:
 	make main.elf
 
-test: main.elf
-	simavr -g -m  $(mmcu) -f 16000000 $^
+debug: main.elf
+	$(TERM) -e "simavr -g -m  $(mmcu) -f 16000000 $^" &
+	(printf "file $^\ntarget remote : 1234" && cat) | avr-gdb
 
 sh.o: sh.c sh.h
 	$(CC) $(CFLAGS) -c $< -o $@
