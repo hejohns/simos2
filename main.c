@@ -23,9 +23,6 @@ int main()
     if(kernel_taskCreate(&sh_init, 128, (void*)0)){
         printf("An error occured creating init\n");
     }
-    while(true){
-        // wait for interrupts eternally
-        asm("nop");
-    }
+    init();
     return 0;
 }

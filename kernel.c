@@ -197,9 +197,8 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED)
                 else{
                     goto normal;
                 }
-            case raw:
-                // only runs once during boot process
-                goto raw2running;
+            case terminated:
+            case stopped:
             default:
                 panic();
         }
@@ -226,6 +225,15 @@ ISR(BADISR_vect)
     cli();
     printf("Catch-all interrupt triggered\n");
     panic();
+}
+
+void init(){
+        kernel.pid[kernel.running].state = running;
+        SP = kernel.pid[kernel.running].sp;
+        resetCounter1();
+        contextPop();
+        sei();
+        asm volatile("ijmp");
 }
 
 void panic()
