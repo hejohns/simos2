@@ -18,12 +18,13 @@ AVROBJCOPY := avr-objcopy
 
 export CPATH := .:
 
-.PHONY: test upload clean
+.PHONY: default test upload clean
 
 default:
 	make main.elf
 
-test: 
+test: main.elf
+	simavr -g -m  $(mmcu) -f 16000000 $^
 
 sh.o: sh.c sh.h
 	$(CC) $(CFLAGS) -c $< -o $@
