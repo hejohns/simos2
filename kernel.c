@@ -176,15 +176,6 @@ ENOMEM:
     return 2;
 }
 
-static inline void kernel_scheduler(){
-    if(kernel.pid[kernel.running].state == running){
-        kernel.pid[kernel.running].state = ready;
-        kernel.pid[kernel.running].sp = kernel.sp_tmp;
-    }
-    // simple round robin
-    kernel.running = (kernel.running+1) % kernel.nbrOfTasks;
-}
-
 ISR(TIMER1_COMPA_vect, ISR_NAKED)
 {
     // called by timer interrupt. The "meat" of the kernel.
@@ -193,20 +184,38 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED)
     /* interrupt pushes 3 byte pc to stack */
     contextPush();
     kernel.sp_tmp = SP;
-    kernel_scheduler();
-    // epilogue
-    if(kernel.pid[kernel.running].state == raw){
-        goto raw2running;
+    {
+        // simple round robin scheduler
+        switch(kernel.pid[kernel.running].state){
+            case running:
+                kernel.pid[kernel.running].state = ready;
+                kernel.pid[kernel.running].sp = kernel.sp_tmp;
+                kernel.running = (kernel.running+1) % kernel.nbrOfTasks;
+                if(kernel.pid[kernel.running].state == raw){
+                    goto raw2running;
+                }
+                else{
+                    goto normal;
+                }
+            case raw:
+                // only runs once during boot process
+                goto raw2running;
+            default:
+                panic();
+        }
     }
+    // epilogue
+normal:
+    kernel.pid[kernel.running].state = running;
     SP = kernel.pid[kernel.running].sp;
-    contextPop();
     resetCounter1();
+    contextPop();
     reti();
 raw2running:
     kernel.pid[kernel.running].state = running;
     SP = kernel.pid[kernel.running].sp;
-    contextPop();
     resetCounter1();
+    contextPop();
     sei();
     asm volatile("ijmp");
 }
