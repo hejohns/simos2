@@ -15,10 +15,15 @@ int main()
     stdout = &uart0_io; // attach uart stream to stdout & stdin
     stdin = &uart0_io; // uart0_in and uart0_out are only available if NO_USART_RX or NO_USART_TX is defined
     
-    kernel_init(RAMEND-SP+128);
+    // allocate task ram as array so the compiler won't accidentally
+    // use the same space
+    uint8_t total_task_ram[TOTAL_TASK_RAM_SIZE];
+    kernel_init(total_task_ram);
     sei(); // enable interrupts, library wouldn't work without this
     printf("hello from printf\n");
-    kernel_taskCreate(&sh_init, 128, (void*)0);
+    if(kernel_taskCreate(&sh_init, 128, (void*)0)){
+        printf("An error occured creating init\n");
+    }
     while(true){
         // wait for interrupts eternally
         asm("nop");

@@ -4,8 +4,9 @@
 #define KERNEL_H
 
 #define MAX_NUMBER_OF_TASKS 5 
+#define TOTAL_TASK_RAM_SIZE 4092
 
-void kernel_init(uint16_t stackReserve);
+void kernel_init(uint8_t* task_ram_start);
 
 char kernel_taskCreate(void (*func)(void*), uint16_t stacksize, void* args);
 
