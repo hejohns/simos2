@@ -6,7 +6,7 @@ ARDUINO := 105
 USB_PID := null
 CFLAGS := -std=gnu11 -ggdb -Os -Wall -Wextra -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(mmcu) -DF_CPU=$(F_CPU) -MMD -DUSB_VID=$(USB_PID) -DUSB_PID=$(USB_PID) -DARDUINO=$(ARDUINO) -D__PROG_TYPES_COMPAT__
 
-LDFLAGS := --gc-sections,--relax
+LDFLAGS := -Wl,--gc-sections,--relax
 
 UPLOAD_BAUD := 115200
 PROGRAMMER_ID := stk500v2
@@ -15,6 +15,7 @@ AVRDUDE_CONF := avrdude/avrdude.conf
 AVRDUDE := avrdude
 
 AVROBJCOPY := avr-objcopy
+AVR-GDB := avr-gdb
 
 # etc
 TERM := xterm
@@ -28,7 +29,7 @@ default:
 
 debug: main.elf
 	$(TERM) -e "simavr -g -m  $(mmcu) -f 16000000 $^" &
-	avr-gdb
+	$(AVR-GDB)
 
 sh.o: sh.c sh.h
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -43,7 +44,7 @@ main.o: main.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 main.elf: main.o usart.o kernel.o sh.o
-	$(CC) $(CFLAGS) -Wl,$(LDFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 main.hex: main.elf
 #	$(AVROBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0 $< main.eep
 	$(AVROBJCOPY) -O ihex -R .eeprom $< $@

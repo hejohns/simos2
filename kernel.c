@@ -95,6 +95,15 @@ static uint8_t* STACK_MINIMUM_ADDRESS = (uint8_t*)400;
         "pop __zero_reg__\n\t"\
         "pop __tmp_reg__")
 
+/* init() is extern wrapper of INIT() since kernel is static */
+#define INIT() \
+        kernel.pid[kernel.running].state = running;\
+        SP = kernel.pid[kernel.running].sp;\
+        resetCounter1();\
+        contextPop();\
+        sei();\
+        asm volatile("ijmp")
+
 typedef enum __attribute__ ((__packed__)) state
 {
     terminated = 0x0,
@@ -211,12 +220,7 @@ normal:
     contextPop();
     reti();
 raw2running:
-    kernel.pid[kernel.running].state = running;
-    SP = kernel.pid[kernel.running].sp;
-    resetCounter1();
-    contextPop();
-    sei();
-    asm volatile("ijmp");
+    INIT();
 }
 
 ISR(BADISR_vect)
@@ -228,12 +232,7 @@ ISR(BADISR_vect)
 }
 
 void init(){
-        kernel.pid[kernel.running].state = running;
-        SP = kernel.pid[kernel.running].sp;
-        resetCounter1();
-        contextPop();
-        sei();
-        asm volatile("ijmp");
+    INIT();
 }
 
 void panic()
