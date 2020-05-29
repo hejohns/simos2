@@ -238,6 +238,7 @@ void init(){
 void panic()
 {
     cli();
+    // unless you wait, very unlikely the print will actually occur before rebooting
     printf("Kernel panic!\nJumping to bootloader...\n");
     // goto address 0 == reboot
     SP = RAMEND;

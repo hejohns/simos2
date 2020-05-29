@@ -9,8 +9,8 @@ void kernel_init(uint16_t stackReserve);
 
 char kernel_taskCreate(void (*func)(void*), uint16_t stacksize, void* args);
 
-void init();
+void init() __attribute__((noreturn));
 
-void panic();
+void panic() __attribute__((noreturn));
 
 #endif /* KERNEL_H */
