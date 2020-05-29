@@ -233,6 +233,10 @@ ISR(BADISR_vect)
 
 void init(){
     INIT();
+    while(1){
+        // or else gcc throws a warning that init does
+        // actually return (gcc has no idea about ijmp)
+    }
 }
 
 void panic()

@@ -6,6 +6,7 @@
 
 #include "kernel.h"
 #include "sh.h"
+#include "mymalloc.h"
 
 size_t volatile omg = 0;
 size_t volatile omg2 = 0;
@@ -26,6 +27,9 @@ void test2(void* arg){
 }
 
 void test3(void* arg){
+    char* ptr = malloc(64);
+    ptr[1] = 'A';
+    ptr[2] = ptr[1];
     while(true){
         omg3++;
     }

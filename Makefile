@@ -31,6 +31,9 @@ debug: main.elf
 	$(TERM) -e "simavr -g -m  $(mmcu) -f 16000000 $^" &
 	$(AVR-GDB)
 
+mymalloc.o: mymalloc.c mymalloc.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
 sh.o: sh.c sh.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -43,7 +46,7 @@ kernel.o: kernel.c kernel.h
 main.o: main.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-main.elf: main.o usart.o kernel.o sh.o
+main.elf: main.o usart.o kernel.o sh.o mymalloc.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 main.hex: main.elf
 #	$(AVROBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0 $< main.eep
