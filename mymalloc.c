@@ -8,14 +8,14 @@
  * mostly just cause this is an educational project
  */
 
-void* mymalloc(size_t size){
+void* malloc(size_t size){
 }
 
-void myfree(void* ptr){
+void free(void* ptr){
 }
 
-void* mycalloc(size_t nmemb, size_t size){
+void* calloc(size_t nmemb, size_t size){
 }
 
-void* myrealloc(void* ptr, size_t size){
+void* realloc(void* ptr, size_t size){
 }
