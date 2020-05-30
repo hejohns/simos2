@@ -1,8 +1,8 @@
-// mymalloc.c
+// hemalloc.c
 /* dynamic memory allocation interface for user tasks */
 #include <stddef.h>
 #include <string.h>
-#include "mymalloc.h"
+#include "hemalloc.h"
 
 /* A very simple buddy? allocator
  *
@@ -18,7 +18,7 @@
 // (The prior seems most logical)
 extern char __bss_end;
 static volatile char* myheap_start = (&__bss_end)+1;
-static volatile char* myheap_end = mymalloc_start;
+static volatile char* myheap_end = hemalloc_start;
 // __heap_start/__heap_end are also compiler defined... but I couldn't find it
 // in the elf dump for this commit
 // (granted I'm not using avr libc's malloc headers)

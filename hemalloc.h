@@ -1,6 +1,6 @@
 // malloc.h
-#ifndef MYMALLOC_H
-#define MYMALLOC_H
+#ifndef HEMALLOC_H
+#define HEMALLOC_H
 
 #include <stddef.h>
 
@@ -12,4 +12,4 @@ void* calloc(size_t nmemb, size_t size) __attribute__((malloc));
 
 void* realloc(void* ptr, size_t size) __attribute__((malloc));
 
-#endif /* MYMALLOC_H */
+#endif /* HEMALLOC_H */
