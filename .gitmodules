@@ -1,3 +1,6 @@
 [submodule "AVR-UART-lib"]
 	path = AVR-UART-lib
 	url = https://github.com/jnk0le/AVR-UART-lib.git
+[submodule "kiku"]
+	path = kiku
+	url = https://github.com/hejohns/kiku.git
